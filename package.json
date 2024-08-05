@@ -13,6 +13,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@wojtekmaj/react-qr-svg": "^2.0.0",
     "antd": "^5.20.0",
     "axios": "^1.7.3",
     "face-api.js": "^0.22.2",
@@ -22,6 +23,8 @@
     "react-dom": "^18.3.1",
     "react-webcam": "^7.2.0",
     "styled-components": "^6.1.12",
+    "viem": "^2.18.8",
+    "wagmi": "^2.12.2",
     "webextension-polyfill": "^0.11.0"
   },
   "devDependencies": {
