@@ -14,9 +14,14 @@
   "type": "module",
   "dependencies": {
     "antd": "^5.20.0",
+    "axios": "^1.7.3",
+    "face-api.js": "^0.22.2",
     "lodash": "^4.17.21",
     "react": "^18.3.1",
+    "react-bodymovin": "^2.0.0",
     "react-dom": "^18.3.1",
+    "react-webcam": "^7.2.0",
+    "styled-components": "^6.1.12",
     "webextension-polyfill": "^0.11.0"
   },
   "devDependencies": {

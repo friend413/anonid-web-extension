@@ -13,7 +13,7 @@ import Header from "../header";
 
 // import { useWebcamContext } from "./hooks/useWebcam";
 // import { WebcamProvider } from "./context/webcam";
-// import CameraComp from "./components/camera";
+import CameraComp from "../camera/index";
 let unsubBalance = "";
 let sdk = null;
 let inputValue = {
@@ -485,25 +485,17 @@ function Home() {
 				""
 			)}
 			{	current == "login" &&
-				<div className="px-[15px] py-[20px] flex flex-col justify-between h-[100%] items-center">
-					<div className="w-[100%] min-h-[10%] flex justify-center">
+				<div className="px-[15px] pt-[20px] pb-[40px] flex flex-col justify-between h-[100%] items-center">
+					<div>
+						<span className="h-[25px] mb-[-6px] ml-[2px] w-[100%] flex flex-col items-center justify-center text-white align-middle">
+							<h1 className="text-sm font-bold tracking-tighter text-white"> ANON ID</h1>
+						</span>
 						<Header />
 					</div>
-					<div className="md:w-[65%] w-[90%] min-h-[70%] flex flex-col items-center justify-center gap-y-[20px]">
-						<div className="aspect-square h-[78%] rounded-[10px] py-[35px]">
-							<div className="w-[100%] h-[100%]">
-								{/* <div className="mx-auto w-[80%] h-[80%] bg-white z-1"> */}
-									{/* <CameraComp captureImage={captureImage} setCessAddr={createWalletTestFromFace} /> */}
-								{/* </div> */}
-								{/* <p className="mx-auto">Anon ID Does Not Store Any Faces only Vector Arrays</p> */}
-							</div>
-						</div>
+					<div className="rounded-[3px] py-[10px]">
+						<CameraComp captureImage={captureImage} setCessAddr={createWalletTestFromFace} />
 					</div>
-					<div className="md:w-[65%] w-[90%] min-h-[15%] flex flex-col items-center justify-center">
-						{/* <p className="block py-[3px] text-[26px]">Did you know?</p> */}
-						{/* <p className="text-[20px]">Facevectors cannot be reversed engineered.</p> */}
-						<p className="text-[20px]">Anon ID does not store any faces only vector arrays.</p>
-					</div>
+					<p className="text-[10px] font-black text-white tracking-[0.1px] text-bold block text-center">Anon ID does not store any faces only vector arrays</p>
 				</div>
 			}
 			<div className={current == "dashboard" ? "dashboard" : "none"}>
