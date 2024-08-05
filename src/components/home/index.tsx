@@ -1,18 +1,36 @@
 import React, { useState, useEffect, useRef } from "react";
-import * as formatter from "../../utils/formatter";
 import { Spin, Tooltip } from "antd";
-// import { mainnet } from "viem/chains";
-
-// import { useAccount, useWalletClient, useFeeData, erc20ABI, useContractWrite, useBalance } from "wagmi";
-// import ReactBodymovin from "react-bodymovin";
-// import Webcam from "react-webcam";
-
-import animation from '@src/utils/data/bodymovin-animation.json';
+import copy from "copy-to-clipboard";
+import CameraComp from "../camera";
 import Header from "../header";
+import * as formatter from "../../utils/formatter";
+import * as antdHelper from "../../utils/antd-helper";
+import store from "../../utils/store";
+import animation from '@src/utils/data/bodymovin-animation.json';
+import webconfig from '../../webconfig';
 
-// import { useWebcamContext } from "./hooks/useWebcam";
-// import { WebcamProvider } from "./context/webcam";
-import CameraComp from "../camera/index";
+interface Account {
+  address: string;
+  mnemonic: string;
+}
+
+interface TransactionHistory {
+  key: string;
+  amount: string;
+  type: string;
+  from: string;
+  fromShort: string;
+  to: string;
+  toShort: string;
+  time: string;
+}
+
+interface WalletInputValue {
+  staking: { amount: number; address: string };
+  send: { amount: number; address: string };
+  nominate: { amount: number; address: string };
+}
+
 let unsubBalance = "";
 let sdk = null;
 let inputValue = {
@@ -20,419 +38,375 @@ let inputValue = {
 	send: { amount: 0, address: "" },
 	nominate: { amount: 0, address: "" }
 };
-// let walletClient;
+
 let pageIndex = 1;
 let historyCount = 0;
 let historyTotalPage = 0;
-let isWaitingEvmConnect = true;
-// let historyTimeout = null;
 
 function Home() {
-	const [loading, setLoading] = useState(null);
-	const [connectStatus, setConnectStatus] = useState("--");
-	const [current, setCurrent] = useState("login");
-	const [boxTitle, setBoxTitle] = useState("Receive");
-	const [accountType, setAccountType] = useState("polkdot");
-	const [showAddressType, setShowAddressType] = useState("CESS");
-	const [historys, setHhistorys] = useState([]);
-	const [accounts, setAccounts] = useState([]);
-	const [account, setAccount] = useState({});
-	const [balance, setBalance] = useState(0);
-	const [available, setAvailable] = useState(0);
-	const [staking, setStaking] = useState(0);
-	const [nominate, setNominate] = useState(0);
-	const [cessAddressFromFace, setCessAddressFromFace] = useState("");
+	const [loading, setLoading] = useState<boolean | null>(null);
+	const [connectStatus, setConnectStatus] = useState<string>("--");
+	const [current, setCurrent] = useState<string>("login");
+	const [accounts, setAccounts] = useState<Account[]>([]);
+	const [account, setAccount] = useState<Account>({address: "", mnemonic: ""});
+	const [balance, setBalance] = useState<number>(0);
+	const [available, setAvailable] = useState<number>(0);
+	const [staking, setStaking] = useState<number>(0);
+	const [nominate, setNominate] = useState<number>(0);
+	const [historys, setHistorys] = useState<TransactionHistory[]>([]);
+	const [customRPC, setCustomRPC] = useState<string>("");
 
-	const [showCustomRPC, setShowCustomRPC] = useState(false);
-	const [customRPC, setCustomRPC] = useState("");
-	const [customRPCLoading, setCustomRPCLoading] = useState(false);
-	const [isWebCamModalOpen, setIsWebCamModalOpen] = useState(false);
+	let historyTimeout: NodeJS.Timeout | undefined = undefined;
 
-	// const { setWebcamStarted, WebCamRef } = useWebcamContext();
-	const [fileList, setFileList] = useState([]);
-	const webcamRef = useRef(null);
-	const videoConstraints = {
-		width: 540,
-		facingMode: "environment"
+	useEffect(() => {
+		let url = store.get<string>("custom-node");
+		if (url) {
+			setCustomRPC(url);
+		}
+		console.log(`previous url: ${url}`);
+		init(url);
+		autoLogin();
+		historyTimeout = setInterval(function () {
+			let addr = store.get<string>("addr");
+			if (addr && account && account.address) {
+				loadHistoryList(addr);
+			}
+		}, 5000);
+
+		return () => {
+			clearInterval(historyTimeout);
+			if (unsubBalance) {
+				// unsubBalance();
+			}
+		};
+	}, []);
+
+	const init = async (url: string | null) => {
+		setConnectStatus("connecting...");
+		try {
+			let config = JSON.parse(JSON.stringify(webconfig.sdkConfig));
+			if (url && url != "wss://testnet-rpc1.cess.cloud/ws/") {
+				config.nodeURL = url;
+			}
+			console.log(`real url: ${url}`);
+			const { api, keyring } = await InitAPI(config);
+			if (api) {
+				window.api = api;
+				window.keyring = keyring;
+				if (customRPC && url && url != "wss://testnet-rpc1.cess.cloud/ws/") {
+					store.set<string>("custom-node", url);
+				}
+			}
+			setConnectStatus("connect success");
+			console.log("rpc connect success");
+
+			return { api, keyring };
+		} catch (e) {
+			setConnectStatus(e.message);
+			console.log("has error");
+			console.log(e);
+		}
 	};
-	const bodymovinOptions = {
-		loop: true,
-		autoplay: true,
-		prerender: true,
-		// animationData: animation
-	};
-
-	// const onUserMedia = e => {
-	// 	console.log(e);
-	// };
-
-	// const onClick = e => {
-	// 	setCurrent(e);
-	// 	setBoxTitle(e);
-	// };
-
-	// useEffect(() => {
-	// 	let url = store.get("custom-node");
-	// 	if (url) {
-	// 		setCustomRPC(url);
-	// 	}
-	// 	console.log(`previous url: ${url}`);
-	// 	init(url);
-	// 	// autoLogin();
-	// 	// historyTimeout = setInterval(function () {
-	// 	// 	let addr = store.get("addr");
-	// 	// 	if (addr && account && account.address) {
-	// 	// 		loadHistoryList(addr);
-	// 	// 	}
-	// 	// }, 5000);
-
-	// 	// setTimeout(() => {
-	// 	// 	onBodymovin();
-	// 	// }, 3000);
-
-	// 	return () => {
-	// 		clearInterval(historyTimeout);
-	// 		if (unsubBalance) {
-	// 			unsubBalance();
-	// 		}
-	// 	};
-	// }, []);
-
-	// const onBodymovin = () => {};
-	// const init = async url => {
-	// 	setConnectStatus("connecting...");
-	// 	try {
-	// 		let config = JSON.parse(JSON.stringify(webconfig.sdkConfig));
-	// 		if (url && url != "wss://testnet-rpc1.cess.cloud/ws/") {
-	// 			config.nodeURL = url;
-	// 		}
-	// 		console.log(`real url: ${url}`);
-	// 		const { api, keyring } = await InitAPI(config);
-	// 		if (api) {
-	// 			window.api = api;
-	// 			window.keyring = keyring;
-	// 			if (customRPC && url && url != "wss://testnet-rpc1.cess.cloud/ws/") {
-	// 				store.set("custom-node", url);
-	// 			}
-	// 		}
-	// 		setConnectStatus("connect success");
-	// 		console.log("rpc connect success");
-
-	// 		return { api, keyring };
-	// 	} catch (e) {
-	// 		setConnectStatus(e.message);
-	// 		console.log("has error");
-	// 		console.log(e);
-	// 	}
-	// };
 
 	const autoLogin = async () => {
-		// let accountType = store.get("accountType");
-		// let addr = store.get("addr");
-		// if (!accountType || !addr) {
-		// 	return;
-		// }
-		// setCurrent("dashboard");
-		// setAccount({ address: addr, meta: {}, evmAddress: addr });
-		// loadHistoryList(addr);
-		// if (accountType == "polkdot") {
-		// 	connectPolkdotWallet(addr);
-		// } else {
-		// 	connectEvmWallet();
-		// }
+		let accountType = store.get<string>("accountType");
+		let addr = store.get<string>("addr");
+		let mnemonic = store.get<string>("mnemonic");
+		if (!accountType || !addr || !mnemonic) {
+			return;
+		}
+		setCurrent("dashboard");
+		setAccount({ address: addr, mnemonic: mnemonic });
+		loadHistoryList(addr);
 	};
 	
 	const createWalletTestFromFace = (addr: string, mnemonic: string) => {
-		// let addrFromFace = addr;
-		// let subBalanceVal = 12321312312;
-		// let accounts = {};
-		// let acc = {};
-		// acc.address = addrFromFace;
-		// acc.mnemonic = mnemonic;
-		// setAccount(acc);
-		// setAccounts([acc]);
-		// setConnectStatus("login success");
-		// setAccount(acc);
-		// setCurrent("dashboard");
-		// setAccountType("face");
+		let addrFromFace = addr;
+		let subBalanceVal = 12321312312;
+		let accounts = {};
+		let acc = {
+			address: addrFromFace,
+			mnemonic: mnemonic,
+		};
+		setAccount(acc);
+		setAccounts([acc]);
+		setConnectStatus("login success");
+		setAccount(acc);
+		setCurrent("dashboard");
 
-		// subBalance(addrFromFace);
-		// //temp subbalance
-		// setAvailable(0);
-		// setStaking(0);
-		// setNominate(0);
-		// setBalance(0);
-		// console.log("showAddressType", showAddressType);
-		// //end
-		// pageIndex = 1;
-		// loadHistoryList(acc.address);
-		// store.set("accountType", "face");
-		// store.set("addr", addrFromFace);
+		subBalance(addrFromFace);
+		setAvailable(0);
+		setStaking(0);
+		setNominate(0);
+		setBalance(0);
+		//end
+		pageIndex = 1;
+		loadHistoryList(acc.address);
+		store.set<string>("accountType", "face");
+		store.set<string>("addr", addrFromFace);
 	};
 
 	const subBalance = async (address: string) => {
-		// console.log("start sub banlace.");
-		// if (unsubBalance) {
-		// 	unsubBalance();
-		// }
-		// unsubBalance = await window.api.query.system.account(address, ({ nonce, data: balance }) => {
-		// 	console.log({ balance });
-		// 	let availableB = formatter.fixed(balance.free / 1e18);
-		// 	setAvailable(availableB);
-		// 	let stakingB = formatter.fixed(balance.reserved / 1e18);
-		// 	setStaking(stakingB);
-		// 	let nominateB = 0; //formatter.fixed(balance.frozen / 1e18);
-		// 	setNominate(nominateB);
-		// 	let all = availableB + stakingB + nominateB;
-		// 	console.log("banlace:", all);
-		// 	setBalance(all);
-		// 	loadHistoryList(address);
-		// });
-		// return unsubBalance;
+		console.log("start sub banlace.");
+		if (unsubBalance) {
+			unsubBalance();
+		}
+		unsubBalance = await window.api.query.system.account(address, ({ nonce, data: balance }) => {
+			console.log({ balance });
+			let availableB = formatter.fixed(balance.free / 1e18);
+			setAvailable(availableB);
+			let stakingB = formatter.fixed(balance.reserved / 1e18);
+			setStaking(stakingB);
+			let nominateB = 0; //formatter.fixed(balance.frozen / 1e18);
+			setNominate(nominateB);
+			let all = availableB + stakingB + nominateB;
+			console.log("banlace:", all);
+			setBalance(all);
+			loadHistoryList(address);
+		});
+		return unsubBalance;
 	};
 
 	const onClick = (e: any) => {
 		setCurrent(e);
-		setBoxTitle(e);
+		// setBoxTitle(e);
 	};
 
 	const onCopy = (txt: string):void => {
-		// console.log("copy ", txt);
-		// copy(txt);
-		// antdHelper.notiOK("Copied");
+		console.log("copy ", txt);
+		copy(txt);
+		antdHelper.notiOK("Copied");
 	};
 
 	const onLogout = () => {
-		// if (unsubBalance) {
-		// 	unsubBalance();
-		// }
-		// antdHelper.notiOK("Logout success.");
-		// setAccount({});
-		// setCurrent("login");
-		// store.remove("accountType");
-		// store.remove("addr");
+		if (unsubBalance) {
+			unsubBalance();
+		}
+		antdHelper.notiOK("Logout success.");
+		setAccount({address: "", mnemonic: ""});
+		setCurrent("login");
+		store.remove("accountType");
+		store.remove("addr");
 	};
 
 	const subState = (d: any) => {
-		// console.log(d);
-		// if (typeof d == "string") {
-		// 	antdHelper.noti(d);
-		// }
-		// else {
-		// 	antdHelper.noti(d.status.toString());
-		// }
+		console.log(d);
+		if (typeof d == "string") {
+			antdHelper.noti(d);
+		}
+		else {
+			antdHelper.noti(d.status.toString());
+		}
 	};
 
 	const onSend = () => {
-		// try {
-		// 	let ret = formatParams(inputValue.send);
-		// 	if (!ret) {
-		// 		return;
-		// 	}
-		// 	let { address, amount } = ret;
-		// 	console.log({ address, amount });
-		// 	let extrinsic = window.api.tx.balances.transfer(address, amount);
-		// 	submitTx(extrinsic);
-		// } catch (e) {
-		// 	let msg = e.message;
-		// 	if (msg.includes("MultiAddress")) {
-		// 		msg = "Please input the correct amount and receiving address.";
-		// 	}
-		// 	antdHelper.alertError(msg);
-		// }
+		try {
+			let ret = formatParams(inputValue.send);
+			if (!ret) {
+				return;
+			}
+			let { address, amount } = ret;
+			console.log({ address, amount });
+			let extrinsic = window.api.tx.balances.transfer(address, amount);
+			submitTx(extrinsic);
+		} catch (e) {
+			let msg = e.message;
+			if (msg.includes("MultiAddress")) {
+				msg = "Please input the correct amount and receiving address.";
+			}
+			antdHelper.alertError(msg);
+		}
 	};
 
 	const onStaking = () => {
-		// try {
-		// 	let ret = formatParams(inputValue.staking);
-		// 	if (!ret) {
-		// 		return;
-		// 	}
-		// 	let { address, amount } = ret;
-		// 	let extrinsic = window.api.tx.sminer.increaseCollateral(address, amount);
-		// 	submitTx(extrinsic);
-		// } catch (e) {
-		// 	antdHelper.alertError(e.message);
-		// }
+		try {
+			let ret = formatParams(inputValue.staking);
+			if (!ret) {
+				return;
+			}
+			let { address, amount } = ret;
+			let extrinsic = window.api.tx.sminer.increaseCollateral(address, amount);
+			submitTx(extrinsic);
+		} catch (e) {
+			antdHelper.alertError(e.message);
+		}
 	};
 
 	const onNominate = async () => {
-		// try {
-		// 	let ret = formatParams(inputValue.nominate);
-		// 	if (!ret) {
-		// 		return;
-		// 	}
-		// 	let { address, amount } = ret;
-		// 	let extrinsic = window.api.tx.staking.nominate([address]);
-		// 	ret = await submitTx(extrinsic, true);
-		// 	if (ret.msg == "ok") {
-		// 		extrinsic = window.api.tx.staking.bond(amount, "Staked");
-		// 		submitTx(extrinsic);
-		// 	}
-		// } catch (e) {
-		// 	antdHelper.alertError(e.message);
-		// }
+		try {
+			let ret = formatParams(inputValue.nominate);
+			if (!ret) {
+				return;
+			}
+			let { address, amount } = ret;
+			let extrinsic = window.api.tx.staking.nominate([address]);
+			ret = await submitTx(extrinsic, true);
+			if (ret.msg == "ok") {
+				extrinsic = window.api.tx.staking.bond(amount, "Staked");
+				submitTx(extrinsic);
+			}
+		} catch (e) {
+			antdHelper.alertError(e.message);
+		}
 	};
 
 	const onInput = (e: any, k1: any, k2: any) => {
-		// console.log('oninput', e, k1, k2);
-		// inputValue[k1][k2] = e.target.value;
+		console.log('oninput', e, k1, k2);
+		inputValue[k1][k2] = e.target.value;
 	};
 
 	const loadHistoryList = async (addr: string) => {
-		// let address = addr || account.address;
-		// if (!address) {
-		// 	console.log("address is null ,jump to load history.");
-		// 	return;
-		// }
-		// // address = "cXffK7BmstE5rXcK8pxKLufkffp9iASMntxUm6ctpR6xS3icV";
-		// let url = `/transfer/query?Acc=${address}&pageindex=${pageIndex}&pagesize=${webconfig.historyPageSize}`;
-		// let ret = await request(url);
-		// console.log(ret);
-		// if (ret.msg != "ok") {
-		// 	return antdHelper.notiError(ret.msg);
-		// }
-		// if (!ret.data.content) {
-		// 	return antdHelper.notiError("API error");
-		// }
-		// let list = ret.data.content.map(t => {
-		// 	return {
-		// 		key: t.hash,
-		// 		amount: formatter.formatBalance(t.amount),
-		// 		type: t.from == address ? "Send" : "Receive",
-		// 		from: t.from,
-		// 		fromShort: formatter.formatAddress(t.from),
-		// 		to: t.to,
-		// 		toShort: formatter.formatAddress(t.to),
-		// 		time: moment(t.timestamp).format("YYYY/MM/DD HH:mm:ss")
-		// 	};
-		// });
-		// historyCount = ret.data.count;
-		// historyTotalPage = parseInt(historyCount / webconfig.historyPageSize);
-		// if (historyCount % webconfig.historyPageSize != 0) {
-		// 	historyTotalPage++;
-		// }
-		// setHhistorys(list);
+		let address = addr || account.address;
+		if (!address) {
+			console.log("address is null ,jump to load history.");
+			return;
+		}
+		// address = "cXffK7BmstE5rXcK8pxKLufkffp9iASMntxUm6ctpR6xS3icV";
+		let url = `/transfer/query?Acc=${address}&pageindex=${pageIndex}&pagesize=${webconfig.historyPageSize}`;
+		let ret = await request(url);
+		console.log(ret);
+		if (ret.msg != "ok") {
+			return antdHelper.notiError(ret.msg);
+		}
+		if (!ret.data.content) {
+			return antdHelper.notiError("API error");
+		}
+		let list = ret.data.content.map(t => {
+			return {
+				key: t.hash,
+				amount: formatter.formatBalance(t.amount),
+				type: t.from == address ? "Send" : "Receive",
+				from: t.from,
+				fromShort: formatter.formatAddress(t.from),
+				to: t.to,
+				toShort: formatter.formatAddress(t.to),
+				time: moment(t.timestamp).format("YYYY/MM/DD HH:mm:ss")
+			};
+		});
+		historyCount = ret.data.count;
+		historyTotalPage = parseInt(historyCount / webconfig.historyPageSize);
+		if (historyCount % webconfig.historyPageSize != 0) {
+			historyTotalPage++;
+		}
+		setHhistorys(list);
 	};
 
 	const onNextHistoryPage = (l: number) => {
-		// pageIndex = pageIndex + l;
-		// loadHistoryList();
+		pageIndex = pageIndex + l;
+		loadHistoryList();
 	};
 
 	const formatParams = (obj: object) => {
-		// console.log(obj);
-		// if (!obj.amount) {
-		// 	antdHelper.alertError("Amount is required.");
-		// 	return null;
-		// }
-		// if (obj.amount.length > 29) {
-		// 	antdHelper.alertError("The amount character length exceeds the limit.");
-		// 	return null;
-		// }
-		// if (isNaN(obj.amount)) {
-		// 	antdHelper.alertError("The Amount allow only numbers input.");
-		// 	return null;
-		// }
-		// let amount = parseFloat(obj.amount);
-		// if (amount < 0) {
-		// 	antdHelper.alertError("Amount error.");
-		// 	return null;
-		// }
-		// if (amount > available) {
-		// 	console.log({ amount, available });
-		// 	antdHelper.alertError("Insufficient Balance");
-		// 	return;
-		// }
-		// amount = BigInt(amount * 1e18);
+		console.log(obj);
+		if (!obj.amount) {
+			antdHelper.alertError("Amount is required.");
+			return null;
+		}
+		if (obj.amount.length > 29) {
+			antdHelper.alertError("The amount character length exceeds the limit.");
+			return null;
+		}
+		if (isNaN(obj.amount)) {
+			antdHelper.alertError("The Amount allow only numbers input.");
+			return null;
+		}
+		let amount = parseFloat(obj.amount);
+		if (amount < 0) {
+			antdHelper.alertError("Amount error.");
+			return null;
+		}
+		if (amount > available) {
+			console.log({ amount, available });
+			antdHelper.alertError("Insufficient Balance");
+			return;
+		}
+		amount = BigInt(amount * 1e18);
 
-		// // amount = amount * 1e18;
-		// if (!obj.address) {
-		// 	antdHelper.alertError("Account address is required.");
-		// 	return null;
-		// }
-		// if (obj.address.length < 40 || obj.address.length > 49) {
-		// 	antdHelper.alertError("Please input the correct receiving address.");
-		// 	return null;
-		// }
-		// return { address: obj.address, amount };
+		// amount = amount * 1e18;
+		if (!obj.address) {
+			antdHelper.alertError("Account address is required.");
+			return null;
+		}
+		if (obj.address.length < 40 || obj.address.length > 49) {
+			antdHelper.alertError("Please input the correct receiving address.");
+			return null;
+		}
+		return { address: obj.address, amount };
 	};
 
 	const backToDashboard = () => {
-		// inputValue = {
-		// 	staking: { amount: 0, address: "" },
-		// 	send: { amount: 0, address: "" },
-		// 	nominate: { amount: 0, address: "" }
-		// };
-		// let t1 = document.querySelectorAll(".textarea1");
-		// t1.forEach(t => (t.value = ""));
-		// t1 = document.querySelectorAll(".textarea2");
-		// t1.forEach(t => (t.value = ""));
-		// setCurrent("dashboard");
-		// loadHistoryList();
+		inputValue = {
+			staking: { amount: 0, address: "" },
+			send: { amount: 0, address: "" },
+			nominate: { amount: 0, address: "" }
+		};
+		let t1 = document.querySelectorAll(".textarea1");
+		t1.forEach(t => (t.value = ""));
+		t1 = document.querySelectorAll(".textarea2");
+		t1.forEach(t => (t.value = ""));
+		setCurrent("dashboard");
+		loadHistoryList();
 	};
 
 	const submitTx = async (extrinsic: any, hideSuccessTips: any) => {
-		// let ret = "";
-		// try {
-		// 	setLoading("signature");
-		// 	console.log(" ------->>>>>>> ")
-		// 	console.log(extrinsic);
-		// 	console.log(" >>>>>>>------- ")
-		// 	if (accountType == "polkdot" || accountType == "face") {
-		// 		// sdk = new Common(window.api, window.keyring);
-		// 		console.log(" -------ppppppppp ")
-		// 		console.log(account.mnemonic);
-		// 		console.log(" ppppppppp------- ")
-		// 		const wallet = window.keyring.addFromMnemonic(account.mnemonic);
+		let ret = "";
+		try {
+			setLoading("signature");
+			console.log(" ------->>>>>>> ")
+			console.log(extrinsic);
+			console.log(" >>>>>>>------- ")
+			if (accountType == "polkdot" || accountType == "face") {
+				// sdk = new Common(window.api, window.keyring);
+				console.log(" -------ppppppppp ")
+				console.log(account.mnemonic);
+				console.log(" ppppppppp------- ")
+				const wallet = window.keyring.addFromMnemonic(account.mnemonic);
 
-		// 		const hash = await extrinsic.signAndSend(wallet);
-		// 		console.log("txhash: ", hash);
-		// 		// ret = await sdk.signAndSend(account.address, extrinsic, subState);
-		// 		ret = { msg: "ok", data: hash };
-		// 	} else {
-		// 		const result = await signAndSendEvm(extrinsic, window.api, walletClient, mappingAccount);
-		// 		const trId = result.status.asInBlock.toHex();
-		// 		ret = { msg: "ok", data: trId };
-		// 	}
-		// 	if (ret.msg == "ok") {
-		// 		if (!hideSuccessTips) {
-		// 			if (current == "Nominate") {
-		// 				antdHelper.alertOk("The Nomination is submitted", `txhash: ${ret.data}`);
-		// 			} else {
-		// 				antdHelper.alertOk("The transaction is submitted.", `txhash: ${ret.data}`);
-		// 			}
-		// 			backToDashboard();
-		// 		}
-		// 	} else {
-		// 		antdHelper.alertError(ret.msg, ret.data);
-		// 	}
-		// } catch (e) {
-		// 	console.log(e);
-		// 	let msg = e.message || e;
-		// 	if (typeof msg == "object") {
-		// 		msg = JSON.stringify(msg);
-		// 	}
-		// 	if (msg.includes("balance too low")) {
-		// 		antdHelper.alertError("Insufficient Balance");
-		// 	} else {
-		// 		antdHelper.alertError(msg);
-		// 	}
-		// } finally {
-		// 	setLoading(null);
-		// }
-		// return ret;
+				const hash = await extrinsic.signAndSend(wallet);
+				console.log("txhash: ", hash);
+				// ret = await sdk.signAndSend(account.address, extrinsic, subState);
+				ret = { msg: "ok", data: hash };
+			} else {
+				ret = { msg: "ok", data: 'wrong wallet' };
+			}
+			if (ret.msg == "ok") {
+				if (!hideSuccessTips) {
+					if (current == "Nominate") {
+						antdHelper.alertOk("The Nomination is submitted", `txhash: ${ret.data}`);
+					} else {
+						antdHelper.alertOk("The transaction is submitted.", `txhash: ${ret.data}`);
+					}
+					backToDashboard();
+				}
+			} else {
+				antdHelper.alertError(ret.msg, ret.data);
+			}
+		} catch (e) {
+			console.log(e);
+			let msg = e.message || e;
+			if (typeof msg == "object") {
+				msg = JSON.stringify(msg);
+			}
+			if (msg.includes("balance too low")) {
+				antdHelper.alertError("Insufficient Balance");
+			} else {
+				antdHelper.alertError(msg);
+			}
+		} finally {
+			setLoading(null);
+		}
+		return ret;
 	};
 
 	const onSelectAccountForInput = async () => {
-		// let acc = await antdHelper.showSelectAccountBox(accounts);
-		// inputValue = {
-		// 	staking: { amount: 0, address: acc.address },
-		// 	send: { amount: 0, address: acc.address },
-		// 	nominate: { amount: 0, address: acc.address }
-		// };
-		// let t1 = document.querySelectorAll(".textarea2");
-		// t1.forEach(t => (t.value = acc.address));
+		let acc = await antdHelper.showSelectAccountBox(accounts);
+		inputValue = {
+			staking: { amount: 0, address: acc.address },
+			send: { amount: 0, address: acc.address },
+			nominate: { amount: 0, address: acc.address }
+		};
+		let t1 = document.querySelectorAll(".textarea2");
+		t1.forEach(t => (t.value = acc.address));
 	};
 
 	const onInputNodeRPC = (e: any) => {
@@ -440,30 +414,21 @@ function Home() {
 	};
 
 	const onReConnect = async (e: any) => {
-		// setCustomRPCLoading(true);
-		// let timeout = setTimeout(function () {
-		// 	setCustomRPCLoading(false);
-		// 	antdHelper.alertError("Connect timeout");
-		// }, 5000);
-		// let { api } = await init(customRPC);
-		// clearTimeout(timeout);
-		// setCustomRPCLoading(false);
-		// if (api) {
-		// 	antdHelper.notiOK("Connected");
-		// 	setShowCustomRPC(false);
-		// } else {
-		// 	antdHelper.alertError("Connect failed");
-		// }
-	};
-
-	const handleModalOpen = () => {
-		// setWebcamStarted(true);
-		// setIsWebCamModalOpen(true);
+		let timeout = setTimeout(function () {
+			antdHelper.alertError("Connect timeout");
+		}, 5000);
+		let { api } = await init(customRPC);
+		clearTimeout(timeout);
+		if (api) {
+			antdHelper.notiOK("Connected");
+		} else {
+			antdHelper.alertError("Connect failed");
+		}
 	};
 
 	const captureImage = () => {
-		// const imageSrc = WebCamRef.getScreenshot();
-		// const uuid = crypto.randomUUID();
+		const imageSrc = WebCamRef.getScreenshot();
+		const uuid = crypto.randomUUID();
 	};
 
 	const onPlay = () => {
