@@ -485,8 +485,11 @@ function Home() {
 				""
 			)}
 			{	current == "login" &&
-				<div className="px-[15px] py-[20px] flex flex-col justify-between h-[100%] items-center">
-					<div className="w-[100%] min-h-[10%] flex justify-center">
+				<div className="px-[15px] py-[30px] flex flex-col justify-between h-[100%] items-center">
+					<div className="w-[100%] min-h-[10%]">
+						<span className="h-[25px] mb-[-6px] ml-[2px] w-[100%] flex flex-col items-center justify-center text-white align-middle">
+							<h1 className="text-base font-black text-white text-bold"> ANON ID</h1>
+						</span>
 						<Header />
 					</div>
 					<div className="md:w-[65%] w-[90%] min-h-[70%] flex flex-col items-center justify-center gap-y-[20px]">
