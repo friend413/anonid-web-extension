@@ -1,6 +1,7 @@
 export default {
 	// apiUrl: "http://8.210.223.137:8080",
 	apiUrl: "https://substatsbd.cess.cloud",
+	picBaseUrl: "",
 	historyPageSize: 10,
 	sdkConfig: {
 		nodeURL: [
