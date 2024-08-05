@@ -223,7 +223,7 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
             }
         }
     }
-    
+	
 
 	const verifyUser = async () => {
 		setSelectButton('verify');
@@ -385,8 +385,8 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
 	},[isDetected])
 
 	return WebcamStarted ? (
-		<div className="flex flex-col justify-center gap-y-[10px]">
-			<div style={{height:`calc(${height}px + 10px)`, width: `calc(${width}px + 10px)`}} className="rounded-[3px] p-[5px] bg-white relative">
+		<div className="flex flex-col justify-center gap-y-[15px]">
+			<div style={{height:`calc(${height}px + 10px)`, width: `calc(${width}px + 10px)`}} className="rounded-[10px] p-[5px] bg-white relative">
 				{/* {!WebCamRef && (
 					<SpinWrapper>
 						<Spin size="large" />
@@ -416,20 +416,20 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
 				</div>
 			</div>
 			<div>
-				<div className="flex flex-col justify-center gap-y-[10px]">
+				<div className="flex flex-col justify-center gap-y-[15px]">
 					<div className="w-[100%] flex justify-between">
-						<button onClick={enrollUser} className={`${selectButton =='enroll' ? 'active':''} border border-white text-[14px] w-[100px] py-1 text-white rounded-[2px]`}>ENROLL
+						<button onClick={enrollUser} className={`${selectButton =='enroll' ? 'active':''} border border-white text-[14px] w-[100px] py-1 text-white rounded-[5px]`}>ENROLL
 							<Spin spinning={isEnrollSpinActive} size="small"  style={{marginLeft:'10px'}}></Spin>
 						</button>
-						<button onClick={verifyUser} className={`${selectButton =='verify'?'active':''} border border-white  text-[14px] w-[100px] py-1 text-white rounded-[2px]`}>VERIFY
+						<button onClick={verifyUser} className={`${selectButton =='verify'?'active':''} border border-white  text-[14px] w-[100px] py-1 text-white rounded-[5px]`}>VERIFY
 							<Spin spinning={isVerifySpinActive} size="small" style={{marginLeft:'10px'}}></Spin>
 						</button>
-						<button onClick={recoverUser} className={`${selectButton =='recover'?'active':''} border border-white text-[14px] w-[100px] py-1 text-white rounded-[2px]`}>RECOVER
+						<button onClick={recoverUser} className={`${selectButton =='recover'?'active':''} border border-white text-[14px] w-[100px] py-1 text-white rounded-[5px]`}>RECOVER
 							<Spin spinning={isRecoverSpinActive} size="small" style={{marginLeft:'10px'}}></Spin>
 						</button>
 					</div>
 					<div>
-						<input placeholder="Enter your recover key" className="border border-sky-800 bg-white px-[5px] py-1 text-[14px] text-[#07385e] rounded-[2px] w-[100%] block" value={recoveryKey} onChange={(e) => setRecoveryKey(e.target.value)}/>
+						<input placeholder="Enter your recover key" className="border border-sky-800 bg-white px-[5px] py-1 text-[14px] text-[#07385e] rounded-[5px] w-[100%] block" value={recoveryKey} onChange={(e) => setRecoveryKey(e.target.value)}/>
 					</div>
 				</div>
 			</div>

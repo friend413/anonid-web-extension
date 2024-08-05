@@ -1,4 +1,3 @@
-// import "./Home.less";
 import React, { useState, useEffect, useRef } from "react";
 import * as formatter from "../../utils/formatter";
 import { Spin, Tooltip } from "antd";
@@ -8,7 +7,7 @@ import { Spin, Tooltip } from "antd";
 // import ReactBodymovin from "react-bodymovin";
 // import Webcam from "react-webcam";
 
-import animation from "./utils/data/bodymovin-animation.json";
+import animation from '@src/utils/data/bodymovin-animation.json';
 import Header from "../header";
 
 // import { useWebcamContext } from "./hooks/useWebcam";
@@ -477,15 +476,8 @@ function Home() {
 
 	return (
 		<div className="Home h-[100%] w-[100%]">
-			{loading == "login-evm" || loading == "login-polkdot" ? (
-				<div className="top-loading">
-					<Spin size="small" /> connecting...
-				</div>
-			) : (
-				""
-			)}
 			{	current == "login" &&
-				<div className="px-[15px] pt-[20px] pb-[40px] flex flex-col justify-between h-[100%] items-center">
+				<div className="px-[15px] pt-[15px] pb-[45px] flex flex-col justify-start h-[100%] items-center">
 					<div>
 						<span className="h-[25px] mb-[-6px] ml-[2px] w-[100%] flex flex-col items-center justify-center text-white align-middle">
 							<h1 className="text-sm font-bold tracking-tighter text-white"> ANON ID</h1>
@@ -495,7 +487,7 @@ function Home() {
 					<div className="rounded-[3px] py-[10px]">
 						<CameraComp captureImage={captureImage} setCessAddr={createWalletTestFromFace} />
 					</div>
-					<p className="text-[10px] font-black text-white tracking-[0.1px] text-bold block text-center">Anon ID does not store any faces only vector arrays</p>
+					<p className="text-[12px] font-black text-white tracking-[0.1px] text-bold block py-[45px] text-center">Anon ID does not store any faces only vector arrays</p>
 				</div>
 			}
 			<div className={current == "dashboard" ? "dashboard" : "none"}>
