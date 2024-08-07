@@ -1,10 +1,9 @@
 import React, { useRef, useEffect, useState, ReactElement } from "react";
 
-import { Modal, Button, Spin , Row, Col, Input } from "antd";
+import { Spin , Col } from "antd";
 import Axios from 'axios';
 // import FaceCam from "./FaceCam";
 import { useWebcamContext } from "@src/hooks/useWebCam";
-import { SpinWrapper, ModalContent } from "./cam.style";
 import * as faceapi from "face-api.js";
 import Webcam from "react-webcam";
 import _debounce from "lodash/debounce";
@@ -12,23 +11,15 @@ import ReactBodymovin from "react-bodymovin";
 import { AnimationWrapper } from "./cam.style";
 
 import animation from "@src/utils/data/bodymovin-animation.json"
-import {Notification} from '../notification';
 import * as antdHelper from "../../utils/antd-helper";
-import { Stream } from "stream";
+
 interface Props {
-    captureImage: () => void; // Update this based on actual function signature
     setCessAddr: (address: string, mnemonic: string) => void;
 }
-  
-interface Resolution {
-    width: number;
-    height: number;
-}
 
-const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElement => {
-	// const { resolution, isDetected, WebCamRef} = useWebcamContext();
+const CameraComp: React.FC<Props> = ({ setCessAddr }): ReactElement => {
     const {
-        resolution, WebcamStarted, setWebcamStarted, isDetected, setIsDetected,
+        resolution, WebcamStarted, setWebcamStarted, setIsDetected,
         setWebCamRef, WebCamRef
     } = useWebcamContext(); // Ensure useWebcamContext returns correctly typed values
 
@@ -38,8 +29,6 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const intervalId = useRef<number | null>(null);
 
-    const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
-    const [isActiveButton, setIsActiveButton] = useState<boolean>(false);
     const [selectButton, setSelectButton] = useState<string | null>(null);
     const [recoveryKey, setRecoveryKey] = useState<string>("");
     const [isEnrollSpinActive, setEnrollSpinActive] = useState<boolean>(false);
@@ -75,17 +64,16 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
         animationData: animation
     };
 
-	const loadModels = async () => {
-		try {
-			const MODEL_URL = process.env.PUBLIC_URL + "/model/";
-			await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-			console.log("Models loaded successfully");
-			setIsModelLoaded(true);
-		} catch (error) {
-			console.error("Error loading models:", error);
-			alert("Model was not loaded.");
-		}
-	};
+	// const loadModels = async () => {
+	// 	try {
+	// 		const MODEL_URL = process.env.PUBLIC_URL + "/model/";
+	// 		await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+	// 		console.log("Models loaded successfully");
+	// 	} catch (error) {
+	// 		console.error("Error loading models:", error);
+	// 		alert("Model was not loaded.");
+	// 	}
+	// };
 
 	const handleWebcamStream = async () => {
 		console.log('handlewebcamStream.................');
@@ -102,9 +90,9 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
                 startFaceDetection(video, videoWidth, videoHeight)
             }, 1500)
 		}
-	  };
+	};
 
-      const startFaceDetection = (video: HTMLVideoElement, videoWidth: number, videoHeight: number) => {
+	const startFaceDetection = (video: HTMLVideoElement, videoWidth: number, videoHeight: number) => {
         console.log('detection');
         if (canvasRef.current) {
             const canvas = canvasRef.current;  // Direct reference to the canvas element
@@ -195,7 +183,6 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
 				} else {
 					console.log('Error');
 				}
-			} else {		
 			}
 		}).catch(err=>{
 			console.log('err', err);
@@ -274,7 +261,6 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
 				} else {
 					antdHelper.noti('Error');						
 				}
-			} else {				
 			}
 		}).catch(err=>{
 			console.log('err', err);
@@ -349,7 +335,6 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
 
 	const _handleModalClose = () => {
 		stopCamera();
-		setIsActiveButton(false);
 		setEnrollSpinActive(false);
 		setVerifySpinActive(false);
 		if (intervalVerify != null)
@@ -373,16 +358,8 @@ const CameraComp: React.FC<Props> = ({ captureImage, setCessAddr }): ReactElemen
 		if (!WebcamStarted) {
 			stopFaceDetection();
 			setIsDetected(false);
-		}  else {
 		}
 	}, [WebcamStarted]);
-
-
-	useEffect(()=>{
-		setTimeout(()=> {
-			setIsActiveButton(true);
-		}, intervalTime);
-	},[isDetected])
 
 	return WebcamStarted ? (
 		<div className="flex flex-col justify-center gap-y-[15px]">

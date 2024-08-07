@@ -53,6 +53,7 @@ body {
 	justify-content: flex-start;
 	padding: 50px 10px 0 10px;
 	height: 100vh;
+	color: white;
 
 	.b1 {
 		height: 141px;
@@ -356,7 +357,8 @@ body {
 .box-out {
 	display: block;
 	padding: 10px;
-
+	color: white;
+	
 	.box {
 		max-width: calc(500px - 6%);
 		margin: 3vw auto;
